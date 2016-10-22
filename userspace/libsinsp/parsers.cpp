@@ -947,6 +947,22 @@ void sinsp_parser::parse_clone_exit(sinsp_evt *evt)
 	{
 		//
 		// clone() returns 0 in the child.
+		//
+
+		//
+		// If the threadinfo in the event exists, and we're in
+		// a container, the threadinfo in the event must be
+		// stale (e.g. from a prior process with the same
+		// tid), because only the child side of a clone
+		// creates the threadinfo for the child. Clear and
+		// remove the old threadinfo.
+		//
+		if(evt->m_tinfo && in_container)
+		{
+			m_inspector->remove_thread(tid, true);
+			evt->m_tinfo = NULL;
+		}
+
 		// Validate that the child thread info has actually been created.
 		//
 		if(!evt->m_tinfo)
@@ -998,17 +1014,8 @@ void sinsp_parser::parse_clone_exit(sinsp_evt *evt)
 		else
 		{
 			//
-			// We are in the child's clone. If we are in a container, make
-			// sure the vtid/vpid are reflected because the father was maybe
-			// running outside the container so created the child thread without
-			// knowing the internal vtid/vpid
+			// Let the parent create the threadinfo for the child
 			//
-			if(in_container)
-			{
-				evt->m_tinfo->m_vtid = vtid;
-				evt->m_tinfo->m_vpid = vpid;
-			}
-
 			return;
 		}
 	}
